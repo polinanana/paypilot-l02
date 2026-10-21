@@ -1,12 +1,5 @@
-# L02 · Скрипт метрик
+# L02 · Metric script
 
-Три текстові метрики DeepEval (faithfulness, answer relevancy, hallucination
-rate) поруч із доменною коректністю, яку рахують рушії стенду PayPilot.
-Скрипт до заняття L02 курсу з тестування LLM-агентів.
-
-Python локально не потрібен: скрипт запускається в Docker. Усе для
-лабораторної береш звідси одним `git clone`, окремо нічого завантажувати не
-треба.
 
 ## Що зробити, коротко
 
@@ -21,31 +14,6 @@ Python локально не потрібен: скрипт запускаєть
 4. `docker compose build` — один раз.
 5. `docker compose run --rm eval --runs 3 --baseline-runs 2 --dry-run`, потім
    те саме без `--dry-run`.
-
-Деталі кожного кроку нижче.
-
-Склонував раніше за 09.10.2026 — почни з `git pull`. Суддя за замовчуванням
-тепер `claude-haiku-5-5`, а стара версія скрипта надсилає цій моделі
-`temperature` і отримує у відповідь 400 з текстом
-"`temperature` is deprecated for this model".
-
-## Що в репозиторії
-
-| Файл | Що це |
-|---|---|
-| `complaints.md` | двадцять скарг C-01…C-20 — вхідний матеріал кроку 1 |
-| `triage.md` | дошка кроку 1: бот як новий співробітник підтримки і три купки для скарг — не знайшов, сказав не те, застосував не так |
-| `l02_eval.py` | скрипт: шле кейси боту, рахує метрики, друкує звіт |
-| `cases.json` | 13 кейсів зі скарг: запит, клієнт (`customer_id`), оракул, перевірка, метрики, контекст |
-| `requirements.txt` | залежності, ставляться в образ |
-| `Dockerfile`, `docker-compose.yml` | образ і запуск |
-| `.env.example` | шаблон `.env`: шлях до стенду і ключ судді |
-
-Стенд не бере клієнта з тексту питання: «I'm CUS-0005» у запиті сесію не
-відкриває. Скрипт передає стенду поле `customer_id` кейса — це те саме, що
-обрати клієнта в дропдауні «як клієнт» у вебінтерфейсі. Кейс без
-`customer_id` іде «без клієнта», і `get_account` відповідає
-`no customer is signed in for this session`.
 
 ## Що потрібно
 
@@ -73,15 +41,6 @@ docker compose run --rm eval --runs 3 --baseline-runs 2 --dry-run
 docker compose run --rm eval --runs 3 --baseline-runs 2
 ```
 
-Команди однакові для macOS, Linux і Windows (PowerShell). Усе після `eval` —
-прапорці скрипта. Звіт друкується в термінал, сирі дані лягають у
-`reports/*.json` у цьому каталозі. Щоб зберегти й звіт, додай `-T` і `tee`:
-
-```bash
-mkdir -p reports
-docker compose run --rm -T eval --runs 3 --baseline-runs 2 2>&1 | tee reports/full-run.txt
-```
-
 `l02_eval.py` і `cases.json` підмонтовані в контейнер, тож правки в них
 діють одразу, без перезбирання. `docker compose build` потрібен лише після
 зміни `requirements.txt` або `Dockerfile`.
@@ -105,41 +64,3 @@ docker compose run --rm -T eval --runs 3 --baseline-runs 2 2>&1 | tee reports/fu
 Тому сервіс `eval` ходить на стенд через `http://host.docker.internal:8000`.
 Стенд на іншому порту — задай `EVAL_STAND_URL` у `.env`, наприклад
 `http://host.docker.internal:8010`.
-
-Linux, стенд опублікований лише на `127.0.0.1`: `host.docker.internal`
-туди не дістане. Бери сервіс `eval-host`, він працює в мережі хоста:
-
-```bash
-EVAL_STAND_URL=http://127.0.0.1:8010 docker compose run --rm eval-host --runs 3 --baseline-runs 2
-```
-
-## Окремий стенд
-
-Якщо `localhost:8000` зайнятий спільним стендом (як на devhub), не чіпай
-його: `docker compose up` у `paypilot-stand` перестворить спільний контейнер. Підніми окремий стенд із
-цього ж `docker-compose.yml`. Сервіс `stand` збирається з каталогу
-`STAND_DIR`, бере його `.env` і слухає лише `127.0.0.1:8010`:
-
-```bash
-docker compose up -d --build stand   # профіль lesson-02
-curl -s http://127.0.0.1:8010/health
-```
-
-У `.env` цього репозиторію додай `EVAL_STAND_URL=http://stand:8000`:
-сервіс `eval` дістає стенд за іменем, бо обидва в одному compose. Команди
-запуску ті самі, з `eval`. Після прогону прибери стенд:
-
-```bash
-docker compose --profile stand down
-```
-
-## Корисні прапорці
-
-| Прапорець | Що робить |
-|---|---|
-| `--profiles clean,lesson-02` | профілі по черзі; перший — baseline |
-| `--runs 3` / `--baseline-runs 2` | прогони профілю заняття / прогони `clean` |
-| `--only C-03,C-04` | лише ці кейси |
-| `--metrics domain` | лише доменна коректність: без судді, безкоштовно і миттєво |
-| `--workers 4` | паралельні кейси; при rate limit зменш |
-| `--dry-run` | план і кількість викликів, нічого не викликає |
