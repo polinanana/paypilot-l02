@@ -55,17 +55,17 @@ Let me know and I'll be happy to help.
 | C11 | Action | Rule was applied incorrectly: wrong dispute window | domain correctness | cases with oracle engine | engine is aware of correct dispute window, doesn't see the question |
 | C12 | Action | Rule was applied incorrectly: wrong dispute window | domain correctness | cases with oracle engine | engine is aware of correct dispute window, doesn't see the question | 
 | C13 | Generation | Invented a fact: allowance says EUR 1,500. pricing page says 5,000 |faithfulness | statement in answer | catch made up data |
-| C14 | Search | Didn't find what needed: gave the list and stopped there | - | - | - |
-| C17 | Generation | Prompt violation: no acknowledgement, no next step | ? | ? |?  |
+| C14 | Search | Didn't find what needed: gave the list and stopped there | retrieval recall/precision | will be covered in L04 | - |
+| C17 | Generation | Prompt violation: no acknowledgement, no next step | faithfulness | no guidance for user | catch violations |
 | C19 | Generation | Invented a fact: account doesn't exist | faithfulness | statement in answer | catch made up data |
 
 
 Resulting table of runs:
 Metric                clean                 lesson-02             Delta
-faithfulness           0.81 (0.80–0.81)      0.50 (0.45–0.53)      -0.30
-answer relevancy       0.91 (0.90–0.93)      0.81 (0.79–0.84)      -0.10
+faithfulness    ↓       0.81 (0.80–0.81)      0.50 (0.45–0.53)      -0.30
+answer relevancy ↓      0.91 (0.90–0.93)      0.81 (0.79–0.84)      -0.10
 hallucination rate ↓   0.06 (0.00–0.11)      0.67 (0.67–0.67)      +0.61
-domain correctness    1.00 (1.00–1.00)      0.33 (0.33–0.33)       -0.67
+domain correctness ↓   1.00 (1.00–1.00)      0.33 (0.33–0.33)       -0.67
 
 ---
 
@@ -73,12 +73,21 @@ domain correctness    1.00 (1.00–1.00)      0.33 (0.33–0.33)       -0.67
 
 | Metric | Threshold | Justification via business impact |
 | --- | --- | --- |
-| Faithfulness | 0,85 | high faithfulness score doesn’t prove the answer is correct |
-| Answer relevancy | 0,7 | User can ask again, no wrong answers delivered here |
-| Hallucination rate | 0 | Answer should be same as curated context. Written rules for critical legacy questions |
-| Domain correctness | 1 | 100% on critical cases; <98% overall |
+| Faithfulness | ≥ 0,80 | high faithfulness score doesn’t prove the answer is correct |
+| Answer relevancy | ≥ 0,75 | user can ask again, no wrong answers delivered here |
+| Hallucination rate | ≤ 8% | it’s the highest rate when users still find chat useful instead of untrustworthy |
+| Domain correctness | ≥ 90% | can use cheaper model that can use domain nuance sometimes |
 
-Mandate: Zero regulatory risk. 
+Mandate: Ship it. 
+
+
+If case if zero regulatory:
+| Metric | Threshold | Justification via business impact |
+| --- | --- | --- |
+| Faithfulness | ≥ 0,95 | cannot be 1 because of judge noise |
+| Answer relevancy | ≥ 0,85 | user can ask again, no wrong answers delivered here |
+| Hallucination rate | ≤ 1% overall, 0% on critical cases | answer should be same as curated context. Written rules for critical legacy questions |
+| Domain correctness | 1 | 100% on critical cases; <98% overall|
 
 ---
 
@@ -98,13 +107,15 @@ Metric: answer relevancy · Data: <run1, lesson-02, clean>
 | 0.9 | ловить 5/12 | хибні тривоги на clean 6/19 |
 
 
+
+
 ---
 
 ## 4. Set limits
 
 |Example, C# | Failure class| Why cannot catch | Risk | Decision |
 | --- | --- | --- | --- | --- |
-| C-03: faithfulness 0.857 | Green metric on wrong conclusion | curated_context gives the rule (60 days) but not today’s date | Make decision to create a separate deterministic check. If the oracle says eligible=false, any statement that the customer is eligible should fail the case |
+| C-03: faithfulness 0.857 | Green metric on wrong conclusion | curated_context gives the rule (60 days) but not today’s date | medium |Make decision to create a separate deterministic check. If the oracle says eligible=false, any statement that the customer is eligible should fail the case |
 | C-05: faithfulness 0.909| Green metric on wrong calculation | faithfulness doesn’t do arithmetic | low | add a consistency check to eval |
 
 ---
@@ -126,7 +137,7 @@ Case: C-05 / same customer, second chat: asked for a full breakdown of 6000 EUR 
 | Question | Answer |
 | --- | --- |
 | Level |Generation |
-| Specification row | - |
+| Specification row | Missing part | 
 | Rewritten specification | If user asks about conversion calculation, parse the breakdown lines and recompute: amount × rate, minus spread and fees, should equal the stated final. |
 | — спостережуваний вихід | Here's your full FX breakdown for converting EUR 6,000 to USD: Components: - Mid rate: 1.086957 - Your tier: Tier 2 - Spread: 1.5% - Free allowance: EUR 1,000 (you've already used EUR 5,000 of your allowance this period, so none applies to this conversion) Calculation: - Gross amount at mid rate: 6,000 × 1.086957 = USD 6,521.74 - Spread applied: USD 97.83 - Final amount: USD 6,423.91. Rounded final amount: USD 6,500. You'll receive USD 6,500 for your EUR 6,000 conversion. |
 | — criteria | domain |
@@ -147,6 +158,10 @@ Case: C-05 / same customer, second chat: asked for a full breakdown of 6000 EUR 
 
 Price: 
 7casesx3runs=21 calls, 21x3 metrics=63 judge calls. total=21+63=84 llm calls
-84 х 3000 tokens=252000 tokens
-(chatgpt-luna is 0.2$ per 1M tokens)
-0,05$ for full overnight runs
+
+13 кейсів × (clean×2 + lesson-02×3) = 65 agent call
+londread formula: 205 calls
+
+205 х 3000 tokens=615 000 tokens
+(claude-haiku5.5 is $0.50$ per 1M tokens)
+$0.31$ for full overnight runs
