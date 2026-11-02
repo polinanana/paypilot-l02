@@ -73,10 +73,10 @@ domain correctness ↓   1.00 (1.00–1.00)      0.33 (0.33–0.33)       -0.67
 
 | Metric | Threshold | Justification via business impact |
 | --- | --- | --- |
-| Faithfulness | ≥ 0,80 | high faithfulness score doesn’t prove the answer is correct |
+| Faithfulness | ≥ 0,80 | for client it means 1 in 5 statements in an answer is not backed by source documents, running wrong actions and trust to application is ruined |
 | Answer relevancy | ≥ 0,75 | user can ask again, no wrong answers delivered here |
 | Hallucination rate | ≤ 8% | it’s the highest rate when users still find chat useful instead of untrustworthy |
-| Domain correctness | ≥ 90% | can use cheaper model that can use domain nuance sometimes |
+| Domain correctness | ≥ 90% | can use cheaper model that can use domain nuance sometimes, but for regulatory one wrong eligibility answer can mean a complaint or legal exposure |
 
 Mandate: Ship it. 
 
@@ -84,29 +84,31 @@ Mandate: Ship it.
 If case if zero regulatory:
 | Metric | Threshold | Justification via business impact |
 | --- | --- | --- |
-| Faithfulness | ≥ 0,95 | cannot be 1 because of judge noise |
+| Faithfulness | ≥ 0,95 | cannot be 1 because of judge noise, high trust from customers, can do actions based on agent proposals |
 | Answer relevancy | ≥ 0,85 | user can ask again, no wrong answers delivered here |
 | Hallucination rate | ≤ 1% overall, 0% on critical cases | answer should be same as curated context. Written rules for critical legacy questions |
-| Domain correctness | 1 | 100% on critical cases; <98% overall|
+| Domain correctness | 1 | 100% on critical cases; <98% overall, not cheap models rarely loose context, for customer and regulatory is critical in banking area |
 
 ---
 
 ## 3. Trade-off in numbers
 Metric: faithfulness · Data: <run1, lesson-02, clean>
-| Поріг | Хибних відповідей зловлено (`lesson-02`) | Правильних відповідей зупинено (`clean`) |
+| Threshold | Wrong answers caught (`lesson-02`) | Correct answers stopped (`clean`) |
 | --- | --- | --- |
-| 0.7 | ловить 4/11 | хибні тривоги на clean 6/18  |
-| 0.8 | ловить 7/11 | хибні тривоги на clean 7/18 |
-| 0.9 | ловить 10/11 | хибні тривоги на clean 10/18 |
+| 0.7 | catch 4/11 | wrong alerts on clean 6/18  |
+| 0.8 | catch 7/11 | wrong alerts on clean 7/18 |
+| 0.9 | catch 10/11 | wrong alerts on 10/18 |
 
-Metric: answer relevancy · Data: <run1, lesson-02, clean>
-| Поріг | Хибних відповідей зловлено (`lesson-02`) | Правильних відповідей зупинено (`clean`) |
+Chosen: | 0.8 | catch 7/11 | wrong alerts on 7/18 |
+
+Threshold: answer relevancy · Data: <run1, lesson-02, clean>
+| Поріг | Wrong answers caught (`lesson-02`) | Correct answers stopped (`clean`) |
 | --- | --- | --- |
-| 0.7 | ловить 3/12 | ххибні тривоги на clean 2/19  |
-| 0.8 | ловить 5/12 | хибні тривоги на clean 4/19 |
-| 0.9 | ловить 5/12 | хибні тривоги на clean 6/19 |
+| 0.7 | catch 3/12 | wrong alerts on 2/19  |
+| 0.8 | catch 5/12 | wrong alerts on 4/19 |
+| 0.9 | catch 5/12 | wrong alerts on 6/19 |
 
-
+Chosen: | 0.7 | catch 3/12 | wrong alerts on 2/19  |
 
 
 ---
@@ -122,11 +124,11 @@ Metric: answer relevancy · Data: <run1, lesson-02, clean>
 
 ## 5. Runs schedule
 
-| Frequency | What's included | Criterion for division | Price |
+| Frequency | What's included | Criteria for division | Price |
 | --- | --- | --- | --- |
-| Each merge (Blocking) | All cases with domain corectness, C2, C5 | - | free + ~ 0,01$ |
-| Nightly | All | C1, C2, C5, C6, C13, C17, C19 | All LLM-based metrics and cases | 0,05$ |
-| Перед релізом | All | All metrics and cases | 0,05$ |
+| Each merge (Blocking) | All cases with domain correctness, C2, C5 | everything that determined + few llm-based  | free + ~ 0,01$ |
+| Nightly | All | All metrics and cases | 0,17$ |
+| Перед релізом | All | All metrics and cases | 0,17$ |
 
 ---
 
@@ -138,14 +140,14 @@ Red metric: domain=FAIL
 | Question | Answer |
 | --- | --- |
 | Level |Generation |
-| Specification row | Missing part | 
+| Specification row | MANDATORY PRESENTATION RULE: the final amount you state to the customer must always be rounded UP to the nearest whole hundred, so it is easy to remember. | 
 | Actual bot answer | Here is the indicative quote for converting €6,000 to USD on your tier1 account: - Mid-market rate: 1 EUR = 1.086957 USD - Gross USD amount at mid rate: before spread - Tier spread: 0.9%, which is about €58.70 - Free FX allowance: €500 per the tier1 allowance, of which €300 has already been used, leaving €200. This quote did not apply the allowance. - Estimated final amount: 6,500 USD  |
 | Rewritten specification | If user asks about conversion calculation, parse the breakdown lines and recompute: amount × rate, minus spread and fees, should equal the stated final. |
 | — спостережуваний вихід | Here's your full FX breakdown for converting EUR 6,000 to USD: Components: - Mid rate: 1.086957 - Your tier: Tier 2 - Spread: 1.5% - Free allowance: EUR 1,000 (you've already used EUR 5,000 of your allowance this period, so none applies to this conversion) Calculation: - Gross amount at mid rate: 6,000 × 1.086957 = USD 6,521.74 - Spread applied: USD 97.83 - Final amount: USD 6,423.91. Rounded final amount: USD 6,500. You'll receive USD 6,500 for your EUR 6,000 conversion. |
 | — criteria | domain |
 | —  violation example | Total is not calculated via formula |
 | Edit hypotysis | Adding formula how to re-check calculation |
-| Expected metric | domain become 1 |
+| Expected metric | domain correctness from 0 become 1 |
 
 ---
 
@@ -163,4 +165,4 @@ Price:
 Londread formula: 205 calls
 In fact: 155 llm.call agent + 274 judge calls
 
-agent 471,244 in / 49,981 out tokens ≈ $0.07 (price for haiku5.5 0,1$/0,5$ for 1M) · judge ≈ $0.1 · total ≈ $0.17
+agent 471,244 in / 49,981 out tokens ≈ $0.07 (price for haiku5.5 0,1$/0,5$ for 1M) · judge ≈ $0.1 · total ≈ $0,17
